@@ -1,6 +1,6 @@
 # image_classification_proj
 
-A new Flutter project.
+한국외국어 대학교 딥러닝 - 모바일 앱 
 
 ## Getting Started
 
