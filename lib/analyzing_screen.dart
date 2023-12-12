@@ -1,6 +1,9 @@
+import 'dart:io';
+
 import 'package:animated_text_kit/animated_text_kit.dart';
 import 'package:flutter/material.dart';
 import 'package:image_classification_proj/graphs/bar_chart.dart';
+import 'package:image_classification_proj/graphs/insta_result_widget.dart';
 import 'package:image_classification_proj/graphs/pie_chart.dart';
 import 'package:image_classification_proj/graphs/serailze_data.dart';
 import 'package:image_classification_proj/graphs/text_bubble_chart.dart';
@@ -8,7 +11,12 @@ import 'package:image_classification_proj/graphs/text_bubble_chart.dart';
 class AnalyzingScreen extends StatefulWidget {
   List<List<double>> prediction;
   List<List<String>> label;
-  AnalyzingScreen({super.key, required this.prediction, required this.label});
+  File image;
+  AnalyzingScreen(
+      {super.key,
+      required this.prediction,
+      required this.label,
+      required this.image});
 
   @override
   State<AnalyzingScreen> createState() => _AnalyzingScreenState();
@@ -21,11 +29,18 @@ class _AnalyzingScreenState extends State<AnalyzingScreen> {
   final GlobalKey fashionGenderKey = GlobalKey();
   final GlobalKey fashionFavorKey = GlobalKey();
   final GlobalKey fashionWeatherKey = GlobalKey();
+  final GlobalKey fashionSituationKey = GlobalKey();
   List<Widget> widgets = [];
+  List<List<String>> resultLabel = [];
+  List<List<double>> resultPredictions = [];
   @override
   initState() {
     super.initState();
-    _buildWidgetsSequentially();
+    _buildWidgetsSequentially(scrollController);
+    for (int i = 6; i < widget.prediction.length; i++) {
+      resultLabel.add(widget.label[i]);
+      resultPredictions.add(widget.prediction[i]);
+    }
   }
 
   int index = 0;
@@ -41,11 +56,16 @@ class _AnalyzingScreenState extends State<AnalyzingScreen> {
           scrollDirection: Axis.vertical,
           child:
               Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            InstaResultWidget(
+              image: widget.image,
+              labels: resultLabel,
+              predictions: resultPredictions,
+            ),
             Column(
               children: widgets,
             ),
             SizedBox(
-              height: 800,
+              height: 200,
             )
           ]),
         ),
@@ -80,15 +100,18 @@ class _AnalyzingScreenState extends State<AnalyzingScreen> {
               displayFullTextOnTap: true,
               stopPauseOnTap: false,
             ),
-            graph
+            graph,
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+            )
           ],
         ),
       ),
     );
   }
 
-  Future<void> _buildWidgetsSequentially() async {
-    await _addWidgetDelayed(
+  Future<void> _buildWidgetsSequentially(ScrollController _controller) async {
+    _addWidgetDelayed(
       Duration(seconds: 0),
       resultBlock(
           '유행한 패션의 연도를 예측했습니다.',
@@ -147,6 +170,18 @@ class _AnalyzingScreenState extends State<AnalyzingScreen> {
           ),
           fashionWeatherKey),
     );
+    await _addWidgetDelayed(
+      Duration(seconds: 2),
+      resultBlock(
+          '어울리는 상황을 예측했습니다.',
+          '',
+          PieChart(
+            maxNum: 8,
+            labels: widget.label[5],
+            values: widget.prediction[5],
+          ),
+          fashionSituationKey),
+    );
   }
 
   // Future<void> autoScroll(GlobalKey targetKey) async {
@@ -160,10 +195,12 @@ class _AnalyzingScreenState extends State<AnalyzingScreen> {
   //   );
   // }
 
-  Future<void> _addWidgetDelayed(Duration duration, Widget widget) async {
+  Future<void> _addWidgetDelayed(Duration duration, Widget? nextWidget) async {
     await Future.delayed(duration);
     setState(() {
-      widgets.add(widget);
+      if (nextWidget != null) {
+        widgets.add(nextWidget);
+      }
     });
   }
 }

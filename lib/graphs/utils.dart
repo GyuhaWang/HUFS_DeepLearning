@@ -4,6 +4,7 @@ List<ChartData> ListToChartDataConverter(
   List<ChartData> result = [];
   for (int i = 0; i < labels.length; i++) {
     ChartData chartData = ChartData(labels[i].toString(), values[i]);
+
     result.add(chartData);
   }
   return result;

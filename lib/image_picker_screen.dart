@@ -3,6 +3,8 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_classification_proj/analyzing_screen.dart';
+import 'package:image_classification_proj/labels/prediction_label.dart';
+import 'package:image_classification_proj/utils/soft_max.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:pytorch_mobile/model.dart';
 import 'package:pytorch_mobile/pytorch_mobile.dart';
@@ -18,65 +20,10 @@ class _ImagePickerScreenState extends State<ImagePickerScreen> {
   static const MethodChannel pytorchChannel =
       MethodChannel('com.pytorch_channel');
   final ImagePicker _picker = ImagePicker();
-  final List<XFile?> _pickedImages = [];
+  XFile? _pickedImages;
   Model? _imageModel;
   dynamic? _imagePrediction;
-  List<List<String>> labels = [
-    ['1950', '1960', '1970', '1980', '1990', '2000', '2010', '2019'],
-    [
-      "ivy",
-      "feminine",
-      "classic",
-      "mods",
-      "minimal",
-      "popart",
-      "space",
-      "hippie",
-      "disco",
-      "military",
-      "punk",
-      "bold",
-      "powersuit",
-      "bodyconscious",
-      "hiphop",
-      "kitsch",
-      "lingerie",
-      "grunge",
-      "metrosexual",
-      "cityglam",
-      "oriental",
-      "ecology",
-      "sportivecasual",
-      "athleisure",
-      "lounge",
-      "normcore",
-      "genderless"
-    ],
-    ['M', 'W'],
-    ["전혀 선호하지 않음", "선호하지 않음", "선호함", "매우 선호함"],
-    ["봄/가을", "여름", "겨울"],
-    ["출근", "데이트", "행사", "사교모임", "일상 생활", "레저 스포츠", "여행/휴가", "기타"],
-    ["1", "2", "3"],
-    ["1", "2"],
-    ["1", "2"],
-    ["1", "2"],
-    ["0", "1"],
-    ["0", "1"],
-    ["0", "1"],
-    ["0", "1"],
-    ["0", "1"],
-    ["0", "1"],
-    ["0", "1"],
-    ["0", "1"],
-    ["0", "1"],
-    ["0", "1"],
-    ["0", "1"],
-    ["0", "1"],
-    ["0", "1"],
-    ["0", "1"],
-    ["0", "1"],
-    ["1", "2"],
-  ];
+  List<List<String>> labels = ImageClassificationLabels.fashion_label;
   List<List<double>>? _prediction;
 
   @override
@@ -92,33 +39,20 @@ class _ImagePickerScreenState extends State<ImagePickerScreen> {
     final XFile? image = await _picker.pickImage(source: source);
 
     setState(() {
-      _pickedImages.add(image);
+      _pickedImages = image;
     });
   }
 
-  // 이미지 여러개 불러오기
-  void getMultiImage() async {
-    final List<XFile>? images = await _picker.pickMultiImage();
-
-    if (images != null) {
-      setState(() {
-        _pickedImages.addAll(images);
-      });
-    }
-  }
-
-  //load your model
   Future loadModel() async {
     String pathImageModel = 'assets/models/best2.pt';
 
     try {
       _imageModel = await PyTorchMobile.loadModel(pathImageModel);
     } on PlatformException {
-      print("only supported for android and ios so far");
+      print("오류 발생함");
     }
   }
 
-  //run an image model
   Future runImageModel(String imagePath) async {
     _imagePrediction =
         await _imageModel!.getImagePredictionList(File(imagePath), 224, 224);
@@ -141,11 +75,12 @@ class _ImagePickerScreenState extends State<ImagePickerScreen> {
               _gridPhoto(),
               IconButton(
                   onPressed: () async {
-                    await runImageModel(_pickedImages[0]!.path);
+                    await runImageModel(_pickedImages!.path);
                     Navigator.of(context).push(MaterialPageRoute(
                         builder: (context) => AnalyzingScreen(
                               prediction: _prediction!,
                               label: labels,
+                              image: File(_pickedImages!.path),
                             )));
                   },
                   icon: Icon(Icons.radio_button_checked))
@@ -164,24 +99,16 @@ class _ImagePickerScreenState extends State<ImagePickerScreen> {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           SizedBox(
-            child: ElevatedButton(
+            child: IconButton(
               onPressed: () => getImage(ImageSource.camera),
-              child: const Text('Camera'),
+              icon: const Icon(Icons.camera_alt),
             ),
           ),
           const SizedBox(width: 20),
           SizedBox(
-            child: ElevatedButton(
-              onPressed: () => getImage(ImageSource.gallery),
-              child: const Text('Image'),
-            ),
-          ),
-          const SizedBox(width: 20),
-          SizedBox(
-            child: ElevatedButton(
-              onPressed: () => getMultiImage(),
-              child: const Text('Multi Image'),
-            ),
+            child: IconButton(
+                onPressed: () => getImage(ImageSource.gallery),
+                icon: const Icon(Icons.photo)),
           ),
         ],
       ),
@@ -191,21 +118,12 @@ class _ImagePickerScreenState extends State<ImagePickerScreen> {
   // 불러온 이미지 gridView
   Widget _gridPhoto() {
     return Expanded(
-      child: _pickedImages.isNotEmpty
-          ? GridView(
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 3,
-              ),
-              children: _pickedImages
-                  .where((element) => element != null)
-                  .map((e) => _gridPhotoItem(e!))
-                  .toList(),
-            )
-          : const SizedBox(),
+      child:
+          _pickedImages != null ? _imageView(_pickedImages!) : const SizedBox(),
     );
   }
 
-  Widget _gridPhotoItem(XFile e) {
+  Widget _imageView(XFile e) {
     return Padding(
       padding: const EdgeInsets.all(2.0),
       child: Stack(
@@ -222,7 +140,7 @@ class _ImagePickerScreenState extends State<ImagePickerScreen> {
             child: GestureDetector(
               onTap: () {
                 setState(() {
-                  _pickedImages.remove(e);
+                  _pickedImages = null;
                 });
               },
               child: const Icon(
@@ -254,20 +172,5 @@ class _ImagePickerScreenState extends State<ImagePickerScreen> {
     }
 
     return results;
-  }
-
-  List<double> softmax(List<double> input) {
-    double sumExp = 0.0;
-
-    for (double value in input) {
-      sumExp += exp(value);
-    }
-
-    List<double> result = [];
-    for (double value in input) {
-      result.add(exp(value) / sumExp);
-    }
-
-    return result;
   }
 }

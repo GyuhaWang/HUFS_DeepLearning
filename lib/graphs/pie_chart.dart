@@ -24,40 +24,50 @@ class _PieChartState extends State<PieChart> {
 
   @override
   Widget build(BuildContext context) {
-    return SfCircularChart(series: <CircularSeries<ChartData, String>>[
-      PieSeries<ChartData, String>(
-          dataSource: chartData,
-          xValueMapper: (ChartData data, _) => data.x,
-          yValueMapper: (ChartData data, _) => data.y,
-          dataLabelMapper: (ChartData data, _) {
-            return "${(data.y * 100).round()}%:${data.x}";
-          },
-          onPointTap: (pointInteractionDetails) {
-            showDialog(
-                context: context,
-                builder: (context) {
-                  return Dialog(
-                    backgroundColor: Colors.white,
-                    child: Container(
-                      padding: EdgeInsets.all(24),
-                      child: Column(mainAxisSize: MainAxisSize.min, children: [
-                        Text(
-                            '${chartData[pointInteractionDetails.pointIndex!].x}'),
-                        Text(
-                            '${(chartData[pointInteractionDetails.pointIndex!].y * 100).round()}%')
-                      ]),
-                    ),
-                  );
-                });
-          },
-          radius: '60%',
-          dataLabelSettings: DataLabelSettings(
-              isVisible: true,
-              // Avoid labels intersection
-              labelIntersectAction: LabelIntersectAction.shift,
-              labelPosition: ChartDataLabelPosition.outside,
-              connectorLineSettings: ConnectorLineSettings(
-                  type: ConnectorType.curve, length: '25%')))
-    ]);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          '에측 결과:${chartData[0].x}  확률:${(chartData[0].y * 100).toStringAsFixed(2)}%',
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+        ),
+        SfCircularChart(series: <CircularSeries<ChartData, String>>[
+          PieSeries<ChartData, String>(
+              dataSource: chartData,
+              xValueMapper: (ChartData data, _) => data.x,
+              yValueMapper: (ChartData data, _) => data.y,
+              dataLabelMapper: (ChartData data, _) {
+                return "${(data.y * 100).round()}%:${data.x}";
+              },
+              onPointTap: (pointInteractionDetails) {
+                showDialog(
+                    context: context,
+                    builder: (context) {
+                      return Dialog(
+                        backgroundColor: Colors.white,
+                        child: Container(
+                          padding: EdgeInsets.all(24),
+                          child:
+                              Column(mainAxisSize: MainAxisSize.min, children: [
+                            Text(
+                                '${chartData[pointInteractionDetails.pointIndex!].x}'),
+                            Text(
+                                '${(chartData[pointInteractionDetails.pointIndex!].y * 100).round()}%')
+                          ]),
+                        ),
+                      );
+                    });
+              },
+              radius: '60%',
+              dataLabelSettings: DataLabelSettings(
+                  isVisible: true,
+                  // Avoid labels intersection
+                  labelIntersectAction: LabelIntersectAction.shift,
+                  labelPosition: ChartDataLabelPosition.outside,
+                  connectorLineSettings: ConnectorLineSettings(
+                      type: ConnectorType.curve, length: '25%')))
+        ]),
+      ],
+    );
   }
 }
